@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HiveRift | Intelligence Brain</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --green: #2ecc71;
+            --dark-green: #27ae60;
+            --bg: #f4f7f4;
+            --text: #2c3e50;
+            --muted: #7f8c8d;
+            --white: #ffffff;
+            --phase-bg: #eafaf1;
+            --phase-border: rgba(46,204,113,0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Urbanist', sans-serif; }
+
+        body {
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-wrapper {
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            background: var(--white);
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(46,204,113,0.15);
+            overflow: hidden;
+        }
+
+        /* ── Header ── */
+        .chat-header {
+            padding: 16px 28px;
+            background: var(--white);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .header-brand h2 { font-weight: 700; font-size: 22px; color: var(--text); }
+        .header-brand h2 span { color: var(--green); }
+        .header-brand p { font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+
+        .header-right { display: flex; align-items: center; gap: 10px; }
+
+        .status-pill {
+            display: flex; align-items: center; gap: 7px;
+            font-size: 13px; font-weight: 600; color: var(--text);
+            background: #e8f8ef; padding: 6px 14px; border-radius: 20px;
+        }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--green); box-shadow: 0 0 8px var(--green);
+        }
+
+        .reset-btn {
+            background: none; border: 1px solid #e0e0e0; color: var(--muted);
+            padding: 6px 12px; border-radius: 20px; cursor: pointer;
+            font-size: 12px; font-weight: 600; font-family: 'Urbanist', sans-serif;
+            transition: all 0.2s;
+        }
+        .reset-btn:hover { border-color: var(--green); color: var(--green); }
+
+        /* ── Phase badge ── */
+        #phaseBadge {
+            display: none;
+            background: var(--phase-bg);
+            border-bottom: 1px solid var(--phase-border);
+            padding: 7px 28px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--dark-green);
+            flex-shrink: 0;
+            animation: fadeIn 0.3s ease;
+        }
+        #phaseBadge i { margin-right: 6px; }
+
+        @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+        /* ── Messages ── */
+        .messages-container {
+            flex: 1;
+            padding: 24px 28px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 #f1f1f1;
+        }
+        .messages-container::-webkit-scrollbar { width: 5px; }
+        .messages-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .messages-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        .msg {
+            max-width: 80%;
+            padding: 14px 18px;
+            border-radius: 18px;
+            font-size: 14.5px;
+            line-height: 1.7;
+            animation: fadeUp 0.25s ease;
+            word-break: break-word;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .msg.bot {
+            align-self: flex-start;
+            background: #f8faf9;
+            color: var(--text);
+            border: 1px solid rgba(46,204,113,0.12);
+            border-bottom-left-radius: 6px;
+        }
+        .msg.user {
+            align-self: flex-end;
+            background: var(--green);
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+
+        /* streaming cursor */
+        .cursor::after {
+            content: "▋";
+            animation: blink 0.7s step-end infinite;
+            color: var(--green);
+            font-size: 13px;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+        /* ── Typing indicator ── */
+        .typing-dots { display: flex; align-items: center; gap: 5px; padding: 12px 18px; }
+        .typing-dots span {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--green); opacity: 0.4;
+            animation: pulse 1.2s ease-in-out infinite;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes pulse { 0%,100%{opacity:0.4;transform:scale(1)} 50%{opacity:1;transform:scale(1.2)} }
+
+        /* ── Suggestions ── */
+        .suggestions {
+            padding: 8px 28px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .chip {
+            background: var(--bg);
+            border: 1px solid rgba(46,204,113,0.25);
+            color: var(--text);
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-size: 12.5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Urbanist', sans-serif;
+            font-weight: 600;
+        }
+        .chip:hover { background: var(--green); color: white; border-color: var(--green); }
+
+        /* ── Input ── */
+        .input-wrapper { padding: 16px 28px; flex-shrink: 0; }
+        .input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg);
+            border: 1.5px solid rgba(46,204,113,0.2);
+            border-radius: 16px;
+            padding: 6px 6px 6px 16px;
+            transition: border-color 0.2s;
+        }
+        .input-container:focus-within { border-color: var(--green); }
+        .input-container input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 11px 0;
+            font-size: 14.5px;
+            color: var(--text);
+            outline: none;
+            font-family: 'Urbanist', sans-serif;
+        }
+        .send-btn {
+            background: var(--green);
+            color: white;
+            border: none;
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        .send-btn:hover { background: var(--dark-green); transform: translateY(-1px); }
+        .send-btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+        @media (max-width: 600px) {
+            body { padding: 0; }
+            .chat-wrapper { height: 100vh; border-radius: 0; }
+            .chat-header, .messages-container, .input-wrapper, .suggestions, #phaseBadge { padding-left: 16px; padding-right: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-wrapper">
+
+    <header class="chat-header">
+        <div class="header-brand">
+            <h2>Hive<span>Rift</span></h2>
+            <p>Intelligence Brain · Phase 3</p>
+        </div>
+        <div class="header-right">
+            <button class="reset-btn" onclick="resetConversation()">
+                <i class="fa-solid fa-rotate-left"></i> New Chat
+            </button>
+            <div class="status-pill">
+                <div class="status-dot"></div>
+                <span>Llama-3 Active</span>
+            </div>
+        </div>
+    </header>
+
+    <div id="phaseBadge">
+        <i class="fa-solid fa-map-signs"></i>
+        <span id="phaseText">Detecting sales phase…</span>
+    </div>
+
+    <div class="messages-container" id="chatWindow">
+        <div class="msg bot">
+            Hello! I am the <strong>HiveRift Intelligence Brain</strong>.<br><br>
+            I understand your needs conversationally and guide you through our services, pricing, and sales process. How can I help you today?
+        </div>
+    </div>
+
+    <div class="suggestions" id="suggestions">
+        <button class="chip" onclick="askChip('What services does HiveRift provide?')">Our Services</button>
+        <button class="chip" onclick="askChip('Price for web development')">Web Dev Pricing</button>
+        <button class="chip" onclick="askChip('Price for UI UX design')">UI/UX Pricing</button>
+        <button class="chip" onclick="askChip('Price for digital marketing')">Marketing Pricing</button>
+        <button class="chip" onclick="askChip('What is the 7 phase sales process?')">Sales Process</button>
+        <button class="chip" onclick="askChip('What payment terms does HiveRift use?')">Payment Terms</button>
+        <button class="chip" onclick="askChip('Does HiveRift offer discounts?')">Discounts</button>
+        <button class="chip" onclick="askChip('I want a custom web application')">Custom App</button>
+    </div>
+
+    <div class="input-wrapper">
+        <div class="input-container">
+            <input type="text" id="userInput" placeholder="Type your inquiry here…" onkeypress="handleKeyPress(event)">
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                <i class="fa-solid fa-arrow-up"></i>
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // ── Config ────────────────────────────────────────────────────────────────
+    const API_BASE   = "https://beastzzz-hiveriftbot123.hf.space";
+    const USE_STREAM = true;   // set false to use /chat (non-streaming)
+
+    const chatWindow  = document.getElementById('chatWindow');
+    const userInput   = document.getElementById('userInput');
+    const sendBtn     = document.getElementById('sendBtn');
+    const phaseBadge  = document.getElementById('phaseBadge');
+    const phaseText   = document.getElementById('phaseText');
+    let isWaiting = false;
+
+    // ── Markdown renderer (minimal) ───────────────────────────────────────────
+    function renderMarkdown(text) {
+        return text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/`(.*?)`/g, '<code>$1</code>')
+            .replace(/\n\n/g, '<br><br>')
+            .replace(/\n/g, '<br>')
+            .replace(/^[\s\S]*?(<br>|$)/gm, s => s)
+            // bullet points
+            .replace(/(?:^|\n)\s*[-•]\s(.+)/g, (_, item) => `<li>${item}</li>`)
+            .replace(/((<li>.*<\/li>\s*)+)/g, '<ul>$1</ul>');
+    }
+
+    // ── Send via SSE streaming ────────────────────────────────────────────────
+    async function sendStream(text) {
+        const botDiv = appendBubble('', 'bot', true);
+        botDiv.classList.add('cursor');
+        let accumulated = '';
+
+        const res = await fetch(API_BASE + '/chat/stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text }),
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // keep incomplete line
+
+            for (const line of lines) {
+                if (!line.startsWith('data:')) continue;
+                const raw = line.slice(5).trim();
+                try {
+                    const payload = JSON.parse(raw);
+                    if (payload.done) {
+                        botDiv.classList.remove('cursor');
+                        return;
+                    }
+                    if (payload.token) {
+                        accumulated += payload.token;
+                        botDiv.innerHTML = renderMarkdown(accumulated);
+                        chatWindow.scrollTop = chatWindow.scrollHeight;
+                    }
+                } catch (_) {}
+            }
+        }
+        botDiv.classList.remove('cursor');
+    }
+
+    // ── Send via standard JSON ────────────────────────────────────────────────
+    async function sendJson(text) {
+        const typingId = appendTyping();
+        const res = await fetch(API_BASE + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text }),
+        });
+        removeEl(typingId);
+        const data = await res.json();
+        if (data.phase) showPhase(data.phase);
+        appendBubble(renderMarkdown(data.reply || 'No response received.'), 'bot');
+    }
+
+    // ── Main send ─────────────────────────────────────────────────────────────
+    async function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text || isWaiting) return;
+
+        appendBubble(text, 'user');
+        userInput.value = '';
+        setWaiting(true);
+
+        try {
+            if (USE_STREAM) {
+                await sendStream(text);
+            } else {
+                await sendJson(text);
+            }
+        } catch (err) {
+            appendBubble('Could not reach the server. Please check the backend.', 'bot');
+        } finally {
+            setWaiting(false);
+        }
+    }
+
+    // ── Reset ─────────────────────────────────────────────────────────────────
+    async function resetConversation() {
+        try {
+            await fetch(API_BASE + '/reset', { method: 'POST' });
+        } catch (_) {}
+        chatWindow.innerHTML = `
+            <div class="msg bot">
+                Memory cleared. Starting a fresh conversation!<br><br>
+                How can I help you today?
+            </div>`;
+        phaseBadge.style.display = 'none';
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function setWaiting(val) {
+        isWaiting = val;
+        sendBtn.disabled = val;
+        userInput.disabled = val;
+    }
+
+    function showPhase(phase) {
+        phaseBadge.style.display = 'block';
+        phaseText.textContent = phase;
+    }
+
+    function askChip(text) {
+        userInput.value = text;
+        sendMessage();
+    }
+
+    function appendBubble(html, sender, returnEl = false) {
+        const div = document.createElement('div');
+        div.className = 'msg ' + sender;
+        if (sender === 'user') {
+            div.textContent = html;
+        } else {
+            div.innerHTML = html;
+        }
+        chatWindow.appendChild(div);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        return returnEl ? div : undefined;
+    }
+
+    function appendTyping() {
+        const id = 'typing-' + Date.now();
+        const div = document.createElement('div');
+        div.id = id;
+        div.className = 'msg bot typing-dots';
+        div.innerHTML = '<span></span><span></span><span></span>';
+        chatWindow.appendChild(div);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        return id;
+    }
+
+    function removeEl(id) {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    }
+
+    function handleKeyPress(e) {
+        if (e.key === 'Enter') sendMessage();
+    }
+</script>
+
+</body>
+</html>
